@@ -1,0 +1,73 @@
+# Capital Cascade Scout — configuration
+# Broad market scan. Edit freely; no code changes needed.
+
+# How many days back to consider a headline "fresh"
+lookback_days: 2
+
+# Max candidate headlines sent to the LLM per run (cost guardrail).
+# After keyword filtering + dedupe, we keep the highest-scoring this-many.
+max_candidates: 60
+
+# Minimum keyword-relevance score (number of distinct cascade terms matched)
+# for a headline to survive the cheap pre-filter before the LLM ever sees it.
+min_prefilter_hits: 1
+
+# ---------------------------------------------------------------------------
+# NEWS SOURCES
+# Google News RSS needs no API key. Each query becomes its own feed.
+# Keep queries broad — the LLM does the precise cascade judgement later.
+# ---------------------------------------------------------------------------
+google_news_queries:
+  # Investor-side: capex commitments / build-outs / boundless-future narratives
+  - "record capital expenditure"
+  - "capex guidance raised"
+  - "multi-billion investment factory"
+  - "data center buildout"
+  - "gigafactory OR megaproject announced"
+  - "capacity expansion plant"
+  - "fleet order shipbuilding"
+  - "mine expansion project"
+  - "grid investment utilities capex"
+  # Supplier-side: order books, backlogs, pricing power, sold-out capacity
+  - "order backlog record"
+  - "lead times extended shortage"
+  - "sold out capacity 2026 2027"
+  - "equipment supplier bookings surge"
+  - "pricing power supplier components"
+  # Bust / oversupply / cancellation signals
+  - "overcapacity glut prices fall"
+  - "project cancelled delayed oversupply"
+  - "capex cut spending reduced"
+  - "price war margins collapse industry"
+  - "writedown impairment overbuild"
+  # Enabler / distressed-asset signals
+  - "distressed assets sold cents on the dollar"
+  - "cheap capacity bankruptcy buyer"
+
+# Optional extra plain RSS feeds (full URLs). Leave empty to skip.
+extra_rss_feeds: []
+  # - "https://www.ft.com/companies?format=rss"
+
+# Domains to drop (low-signal aggregators / paywalled stubs)
+blocked_domains:
+  - "marketscreener.com"
+  - "simplywall.st"
+
+# ---------------------------------------------------------------------------
+# OPTIONAL FINANCE ENRICHMENT (yfinance, no API key)
+# When the LLM flags tickers, we attach a quick price + 1y change snapshot
+# so a "boom narrative" can be cross-checked against what the tape is doing.
+# ---------------------------------------------------------------------------
+enrich_tickers: true
+
+# A small always-on watchlist whose 1y move is appended to every digest as
+# macro context (cascade-relevant bellwethers). Edit to taste.
+context_watchlist:
+  - "SMH"    # semiconductors
+  - "XLU"    # utilities / power
+  - "URA"    # uranium / nuclear fuel
+  - "XLE"    # energy
+  - "XME"    # metals & mining
+  - "BDRY"   # dry bulk shipping
+  - "ITA"    # aerospace & defense
+  - "COPX"   # copper miners
