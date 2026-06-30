@@ -18,9 +18,9 @@ So capital **cascades** through the economy in a partly predictable sequence. So
 by their ROLE in that sequence:
 
 - **Investor** — the builders. Capital-hungry, cyclical, or caught in a boundless-future
-  narrative. They convert balance sheet into bricks. (e.g. AI hyperscalers, miners,
+  narrative. They convert balance sheet into bricks. (A non-exhaustive list of example industries: AI hyperscalers, miners,
   telecoms, utilities building grid/generation, shipowners ordering fleets.)
-- **Supplier** — sells the builders picks and shovels (equipment, components, power,
+- **Supplier** — sells the builders picks and shovels (A non-exhaustive list of example industries: equipment, components, power,
   construction). Revenue mechanically tied to investor capex; captures the highest-quality,
   earliest, cash-on-delivery slice of the boom.
 - **Enabler** — businesses that only become viable *because* investors overbuilt and made
@@ -49,11 +49,24 @@ And tag the cascade PHASE the item points to:
 - Pure demand-forecast / consumer-sentiment stories with no supply or capex angle.
 - Single-stock earnings noise with no cascade linkage.
 - Opinion/markets-commentary with no new fact.
-- Duplicate angles on a story you've already scored highly.
+- Duplicate angles on a story you've already scored highly. If five headlines
+  cover the same data-center / AI story, keep the single best and drop the rest.
+
+## Preserve sector diversity (important)
+
+The news is dominated by whatever capex cycle is loudest right now (currently the
+AI build-out). Do NOT let that crowd the digest. When you have strong candidates
+across different cascades — A non-exhaustive list of example industries: utilities/power, semiconductors, shipping, mining,
+aerospace, defence, chemicals, autos/batteries, LNG, pharma, construction,
+agriculture, telecom — keep the best from EACH represented sector rather than
+returning many variations of the loudest one. A novel, well-evidenced seed from an
+under-covered or *emerging* cycle is MORE valuable to this blog than the Nth
+data-center story of the day; when scores are close, prefer the under-covered one.
 
 ## Output
 
 For each item you keep, return JSON with:
+
 - `headline`, `url`, `source`, `published`
 - `role`: one of investor | supplier | enabler | macro | unclear
 - `phase`: one of boom | peak | bust | trough | unclear
