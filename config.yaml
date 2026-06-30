@@ -6,9 +6,9 @@ lookback_days: 2
 
 # Max candidate headlines sent to the LLM per run (cost guardrail).
 # After keyword filtering + dedupe, we keep the highest-scoring this-many.
-# Raised to 120 because the broader query set below surfaces a longer tail;
+# Raised to 150 because the broader query set below surfaces a longer tail;
 # lower it to cut LLM cost, raise it to catch more of the quiet cycles.
-max_candidates: 120
+max_candidates: 150
 
 # Minimum keyword-relevance score (number of distinct cascade terms matched)
 # for a headline to survive the cheap pre-filter before the LLM ever sees it.
