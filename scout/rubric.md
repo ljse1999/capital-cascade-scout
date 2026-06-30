@@ -49,10 +49,25 @@ And tag the cascade PHASE the item points to:
 - Pure demand-forecast / consumer-sentiment stories with no supply or capex angle.
 - Single-stock earnings noise with no cascade linkage.
 - Opinion/markets-commentary with no new fact.
-- TRUE duplicates ONLY: two headlines reporting the *same event with the same
-  number and no new angle*. If a second headline adds a different company, a
-  different data point, a different stage of the cascade, or a different framing,
-  KEEP BOTH. Multiple angles on one cycle are wanted, not noise to be culled.
+- Collapse SYNDICATED REWRITES. One announcement is often republished by many
+  outlets under different headlines (e.g. a single airline's $10bn aircraft order
+  can appear 5–6 times). These are the SAME event — keep the ONE best-sourced
+  version and drop the rest, even though the wording differs. A real "different
+  angle" means a genuinely different FACT: a different company, a different site,
+  a different supplier, a different data point, or a different stage of the
+  cascade — NOT another outlet's rewrite of the same press release.
+  Worked example: SAS's $10bn A330 order = ONE seed however many outlets run it;
+  but [SAS places the order] + [Airbus's total backlog] + [the engine-maker
+  ramping output] = THREE seeds, because each is a different fact in the cascade.
+  Same rule for policy events — but apply it per FACT, with no fixed cap. A big
+  announcement can spawn several seeds when each captures a genuinely distinct
+  fact: e.g. the UK Defence Investment Plan could yield the headline spend figure,
+  a named base upgrade (Faslane), a specific shipbuilder's workshare, a munitions
+  line, and a drone programme — five legitimate seeds, because each is a different
+  supplier/sub-cascade. What you still collapse is the rewrites of the SAME fact:
+  five outlets all reporting "Starmer announces £X defence boost" = one seed.
+  The test is always "is this a new fact, or the same fact reworded?" — never a
+  quota on how many sub-angles one event may have.
 
 ## Coverage: be generous — depth AND breadth
 
