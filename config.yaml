@@ -6,43 +6,69 @@ lookback_days: 2
 
 # Max candidate headlines sent to the LLM per run (cost guardrail).
 # After keyword filtering + dedupe, we keep the highest-scoring this-many.
-max_candidates: 60
+# Raised to 120 because the broader query set below surfaces a longer tail;
+# lower it to cut LLM cost, raise it to catch more of the quiet cycles.
+max_candidates: 120
 
 # Minimum keyword-relevance score (number of distinct cascade terms matched)
 # for a headline to survive the cheap pre-filter before the LLM ever sees it.
 min_prefilter_hits: 1
 
 # ---------------------------------------------------------------------------
-# NEWS SOURCES
-# Google News RSS needs no API key. Each query becomes its own feed.
-# Keep queries broad — the LLM does the precise cascade judgement later.
+# NEWS SOURCES — Google News RSS (no API key). Each query is its own feed.
+# Structured in three tiers so the tool stays useful for years, not just the
+# current AI capex boom:
+#   TIER 1  durable mechanism queries (sector-neutral; the backbone)
+#   TIER 2  broad sector sweep (forces coverage of every capex cycle, not
+#           just whichever one is loudest in the news this year)
+#   TIER 3  emerging-cycle radar (catches a NEW boom forming early)
+# The LLM rubric judges on mechanism, not sector, so these only decide what
+# gets *seen* — keep Tier 1 + Tier 2 stable, edit Tier 3 / hotspots over time.
 # ---------------------------------------------------------------------------
 google_news_queries:
-  # Investor-side: capex commitments / build-outs / boundless-future narratives
+  # ---- TIER 1 — durable mechanism (do not need editing as themes change) ----
   - "record capital expenditure"
   - "capex guidance raised"
-  - "multi-billion investment factory"
-  - "data center buildout"
-  - "gigafactory OR megaproject announced"
-  - "capacity expansion plant"
-  - "fleet order shipbuilding"
-  - "mine expansion project"
-  - "grid investment utilities capex"
-  # Supplier-side: order books, backlogs, pricing power, sold-out capacity
+  - "capital spending plan billion"
+  - "multi-billion investment announced"
+  - "capacity expansion announced"
   - "order backlog record"
   - "lead times extended shortage"
-  - "sold out capacity 2026 2027"
-  - "equipment supplier bookings surge"
-  - "pricing power supplier components"
-  # Bust / oversupply / cancellation signals
+  - "sold out capacity"
+  - "supplier bookings surge pricing power"
   - "overcapacity glut prices fall"
   - "project cancelled delayed oversupply"
   - "capex cut spending reduced"
   - "price war margins collapse industry"
   - "writedown impairment overbuild"
-  # Enabler / distressed-asset signals
   - "distressed assets sold cents on the dollar"
-  - "cheap capacity bankruptcy buyer"
+
+  # ---- TIER 2 — broad sector sweep (one feed per capex-heavy industry) ------
+  - "semiconductor fab capacity investment"
+  - "data center buildout capacity"          # current hotspot; keep, not privileged
+  - "power generation grid capex utilities"
+  - "LNG export terminal capacity investment"
+  - "oil gas refining capex expansion"
+  - "mining mine expansion project investment"
+  - "copper lithium nickel capacity expansion"
+  - "steel aluminium cement plant capacity"
+  - "chemicals petrochemical plant capacity"
+  - "battery gigafactory EV plant capacity"
+  - "automaker factory investment expansion"
+  - "shipbuilding fleet order capacity"
+  - "aerospace defence production capacity backlog"
+  - "pharmaceutical biomanufacturing capacity expansion"
+  - "homebuilding construction housing starts capacity"
+  - "agriculture fertiliser capacity investment"
+  - "airline aircraft order fleet expansion"
+  - "telecom fibre network capex rollout"
+
+  # ---- TIER 3 — emerging-cycle radar (catch the NEXT boom early) ------------
+  - "new investment boom industry"
+  - "capex supercycle"
+  - "race to build capacity"
+  - "surge in new factory orders"
+  - "wave of investment new capacity"
 
 # Optional extra plain RSS feeds (full URLs). Leave empty to skip.
 extra_rss_feeds: []
@@ -61,13 +87,18 @@ blocked_domains:
 enrich_tickers: true
 
 # A small always-on watchlist whose 1y move is appended to every digest as
-# macro context (cascade-relevant bellwethers). Edit to taste.
+# macro context. Diversified across cascade-relevant sectors so the bellwether
+# panel doesn't itself become an AI-only dashboard. Edit to taste.
 context_watchlist:
   - "SMH"    # semiconductors
   - "XLU"    # utilities / power
   - "URA"    # uranium / nuclear fuel
   - "XLE"    # energy
   - "XME"    # metals & mining
-  - "BDRY"   # dry bulk shipping
-  - "ITA"    # aerospace & defense
   - "COPX"   # copper miners
+  - "LIT"    # lithium / battery
+  - "BDRY"   # dry bulk shipping
+  - "ITA"    # aerospace & defence
+  - "XHB"    # homebuilders / construction
+  - "MOO"    # agribusiness
+  - "JETS"   # airlines
