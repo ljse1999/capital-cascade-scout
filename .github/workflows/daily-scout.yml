@@ -1,0 +1,47 @@
+name: Capital Cascade Daily Scout
+
+on:
+  schedule:
+    - cron: "30 6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  scout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run the scout
+        env:
+          LLM_PROVIDER: ${{ vars.LLM_PROVIDER || 'glm' }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+          ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python -m scout.run
+
+      - name: Commit digest
+        run: |
+          git config user.name  "cascade-scout"
+          git config user.email "actions@github.com"
+          git add digests/
+          if git diff --staged --quiet; then
+            echo "No new digest to commit."
+          else
+            git commit -m "Daily seeds: $(date -u +%Y-%m-%d)"
+            git push
+          fi
