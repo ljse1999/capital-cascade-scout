@@ -16,7 +16,7 @@ DEFAULT_MODELS = {
     "gemini": "gemini-2.0-flash",
     "openai": "gpt-4o-mini",
     "anthropic": "claude-haiku-4-5-20251001",
-    "glm": "glm-4.6",
+    "glm": "glm-5.2",
     "deepseek": "deepseek-chat",
 }
 
@@ -67,7 +67,8 @@ def complete(system: str, user: str) -> str:
         spec = OPENAI_COMPATIBLE[provider]
         # LLM_BASE_URL overrides the default endpoint if you ever need to.
         base_url = os.environ.get("LLM_BASE_URL", spec["base_url"])
-        client = OpenAI(api_key=os.environ[spec["key"]], base_url=base_url)
+        client = OpenAI(api_key=os.environ[spec["key"]], base_url=base_url,
+                        timeout=90, max_retries=1)
         resp = client.chat.completions.create(
             model=model,
             messages=[{"role": "system", "content": system},
