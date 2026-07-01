@@ -51,24 +51,20 @@ def _extract_json(text: str):
 
 
 def complete(system: str, user: str) -> str:
-    provider = os.environ.get("LLM_PROVIDER", "minimax").lower()
-    model = os.environ.get("LLM_MODEL", DEFAULT_MODELS[provider])
+    # Use `or` so an empty env var (e.g. an unset GitHub Actions variable that
+    # still exports LLM_MODEL="") falls back to the default rather than sending
+    # an empty/invalid model string to the API.
+    provider = (os.environ.get("LLM_PROVIDER") or "minimax").strip().lower()
+    if provider not in DEFAULT_MODELS:
+        raise ValueError(
+            f"Unknown LLM_PROVIDER {provider!r}. Choose one of: "
+            f"{', '.join(DEFAULT_MODELS)}."
+        )
+    model = (os.environ.get("LLM_MODEL") or "").strip() or DEFAULT_MODELS[provider]
 
     if provider in OPENAI_COMPATIBLE:
         from openai import OpenAI
         spec = OPENAI_COMPATIBLE[provider]
         # LLM_BASE_URL overrides the default endpoint if you ever need to.
         base_url = os.environ.get("LLM_BASE_URL", spec["base_url"])
-        client = OpenAI(api_key=os.environ[spec["key"]], base_url=base_url, timeout=600, max_retries=0)
-        resp = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "system", "content": system},
-                      {"role": "user", "content": user}],
-        )
-        return resp.choices[0].message.content
-
-    raise ValueError(f"Unknown LLM_PROVIDER: {provider}")
-
-
-def complete_json(system: str, user: str):
-    return _extract_json(complete(system, user))
+        client = OpenAI(api_key=os.environ[spec["key"]], base_url=base_url, timeout=600,
