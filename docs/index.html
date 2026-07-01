@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Capital Cascade Tracker</title>
+<link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+<header class="site-header">
+  <h1><a href="index.html">Capital Cascade Tracker</a></h1>
+  <nav class="site-nav">
+    <a href="index.html" class="active">Overview</a>
+    <a href="timeline.html">Timeline</a>
+  </nav>
+</header>
+
+<main>
+  <p class="subtitle">
+    Where each industry sits in the cascade right now &mdash; role, phase, and
+    recent activity, drawn from a daily news scan and a monthly quantitative read.
+  </p>
+
+  <div id="tiles" class="tile-grid">
+    <p class="empty-note">Loading&hellip;</p>
+  </div>
+</main>
+
+<footer class="site-footer">
+  Capital Cascade &mdash; automated tracker, updated daily (news) and monthly (financials).
+</footer>
+
+<script src="assets/data.js"></script>
+<script>
+(async function () {
+  const { seeds, trends, assessments } = await CascadeData.loadAll();
+  const latest = CascadeData.latestAssessments(assessments);
+  const container = document.getElementById("tiles");
+
+  const sectorKeys = Object.keys(CascadeData.SECTORS);
+
+  function weekRange(sector) {
+    return CascadeData.trendsFor(trends, sector);
+  }
+
+  function trendDirection(rows) {
+    if (rows.length < 2) return "flat";
+    const last = rows[rows.length - 1].score_sum || 0;
+    const prev = rows[rows.length - 2].score_sum || 0;
+    if (last > prev) return "up";
+    if (last < prev) return "down";
+    return "flat";
+  }
+
+  const tiles = sectorKeys.map((sector) => {
+    const rows = weekRange(sector);
+    const lastRow = rows[rows.length - 1];
+    const seedCount = lastRow ? lastRow.count : 0;
+    const dir = trendDirection(rows);
+    const dirClass = dir === "up" ? "trend-up" : dir === "down" ? "trend-down" : "trend-flat";
+
+    const assessment = latest[sector];
+    const phase = assessment ? assessment.phase : (rows.length ? "unclear" : null);
+    const role = assessment ? assessment.role : null;
+    const color = phase ? (CascadeData.PHASE_COLORS[phase] || CascadeData.PHASE_COLORS.unclear) : "var(--panel-border)";
+    const phaseLabel = phase ? (CascadeData.PHASE_LABELS[phase] || phase) : "No read yet";
+    const roleIcon = role ? (CascadeData.ROLE_ICONS[role] || "") : "";
+
+    return `
+      <a class="tile" style="border-left-color:${color}" href="sector.html?sector=${encodeURIComponent(sector)}">
+        <div class="sector-name">${roleIcon ? roleIcon + " " : ""}${CascadeData.sectorLabel(sector)}</div>
+        <div class="tile-meta">
+          <span class="phase-badge" style="background:${color}">${phaseLabel}</span>
+          <span class="${dirClass}">${seedCount} seed${seedCount === 1 ? "" : "s"}/wk</span>
+        </div>
+      </a>`;
+  });
+
+  container.innerHTML = tiles.join("") || '<p class="empty-note">No data yet &mdash; check back after the first scout run.</p>';
+})();
+</script>
+</body>
+</html>

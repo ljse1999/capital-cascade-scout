@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Timeline &mdash; Capital Cascade Tracker</title>
+<link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+<header class="site-header">
+  <h1><a href="index.html">Capital Cascade Tracker</a></h1>
+  <nav class="site-nav">
+    <a href="index.html">Overview</a>
+    <a href="timeline.html" class="active">Timeline</a>
+  </nav>
+</header>
+
+<main>
+  <p class="subtitle">Every seed the scout has kept, newest first &mdash; filter by sector, role, phase, score, or date.</p>
+
+  <div class="panel">
+    <div class="filters">
+      <select id="filter-sector"><option value="">All sectors</option></select>
+      <select id="filter-role"><option value="">All roles</option></select>
+      <select id="filter-phase"><option value="">All phases</option></select>
+      <select id="filter-score">
+        <option value="0">Any score</option>
+        <option value="3">Score &ge; 3</option>
+        <option value="4">Score &ge; 4</option>
+        <option value="5">Score = 5</option>
+      </select>
+      <input type="date" id="filter-from" title="From date" />
+      <input type="date" id="filter-to" title="To date" />
+      <span class="empty-note" id="result-count"></span>
+    </div>
+    <ul class="seed-list" id="seed-list"></ul>
+  </div>
+</main>
+
+<footer class="site-footer">
+  Capital Cascade &mdash; automated tracker, updated daily (news) and monthly (financials).
+</footer>
+
+<script src="assets/data.js"></script>
+<script>
+(async function () {
+  const { seeds } = await CascadeData.loadAll();
+  const allSeeds = seeds.slice().sort((a, b) => ((a.published || "") < (b.published || "") ? 1 : -1));
+
+  const sectorSel = document.getElementById("filter-sector");
+  const roleSel = document.getElementById("filter-role");
+  const phaseSel = document.getElementById("filter-phase");
+  const scoreSel = document.getElementById("filter-score");
+  const fromEl = document.getElementById("filter-from");
+  const toEl = document.getElementById("filter-to");
+  const listEl = document.getElementById("seed-list");
+  const countEl = document.getElementById("result-count");
+
+  Object.keys(CascadeData.SECTORS).forEach((s) => {
+    const o = document.createElement("option");
+    o.value = s; o.textContent = CascadeData.sectorLabel(s);
+    sectorSel.appendChild(o);
+  });
+  [...new Set(allSeeds.map((s) => s.role))].forEach((r) => {
+    const o = document.createElement("option");
+    o.value = r; o.textContent = r;
+    roleSel.appendChild(o);
+  });
+  [...new Set(allSeeds.map((s) => s.phase))].forEach((p) => {
+    const o = document.createElement("option");
+    o.value = p; o.textContent = CascadeData.PHASE_LABELS[p] || p;
+    phaseSel.appendChild(o);
+  });
+
+  function render() {
+    const sector = sectorSel.value, role = roleSel.value, phase = phaseSel.value;
+    const minScore = Number(scoreSel.value);
+    const from = fromEl.value, to = toEl.value;
+
+    const filtered = allSeeds.filter((s) => {
+      if (sector && s.sector !== sector) return false;
+      if (role && s.role !== role) return false;
+      if (phase && s.phase !== phase) return false;
+      if (minScore === 5 ? (s.score || 0) !== 5 : (s.score || 0) < minScore) return false;
+      const d = CascadeData.fmtDate(s.published);
+      if (from && d < from) return false;
+      if (to && d > to) return false;
+      return true;
+    });
+
+    countEl.textContent = `${filtered.length} of ${allSeeds.length} seeds`;
+    listEl.innerHTML = filtered.length
+      ? filtered.map((s) => `
+        <li class="seed-item">
+          <a class="seed-headline" href="${s.url}" target="_blank" rel="noopener">${s.headline}</a>
+          <div class="seed-meta">${CascadeData.sectorLabel(s.sector)} &middot; ${CascadeData.ROLE_ICONS[s.role] || ""} ${s.role} &middot; ${CascadeData.PHASE_LABELS[s.phase] || s.phase} &middot; score ${s.score} &middot; ${s.source} &middot; ${CascadeData.fmtDate(s.published)}</div>
+          <div class="seed-why">${s.why || ""}</div>
+        </li>`).join("")
+      : '<p class="empty-note">No seeds match these filters.</p>';
+  }
+
+  [sectorSel, roleSel, phaseSel, scoreSel, fromEl, toEl].forEach((el) => el.addEventListener("input", render));
+  render();
+})();
+</script>
+</body>
+</html>

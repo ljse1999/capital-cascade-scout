@@ -32,11 +32,16 @@ jobs:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: python -m scout.run
 
+      - name: Sync data into docs/ for GitHub Pages
+        run: |
+          mkdir -p docs/data
+          cp data/*.jsonl docs/data/
+
       - name: Commit digest
         run: |
           git config user.name  "cascade-scout"
           git config user.email "actions@github.com"
-          git add digests/ data/
+          git add digests/ data/ docs/data/
           if git diff --staged --quiet; then
             echo "No new digest to commit."
           else

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sector &mdash; Capital Cascade Tracker</title>
+<link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+<header class="site-header">
+  <h1><a href="index.html">Capital Cascade Tracker</a></h1>
+  <nav class="site-nav">
+    <a href="index.html">Overview</a>
+    <a href="timeline.html">Timeline</a>
+  </nav>
+</header>
+
+<main>
+  <p><a class="back-link" href="index.html">&larr; All sectors</a></p>
+  <h2 id="sector-title">Loading&hellip;</h2>
+  <div id="sector-summary" class="panel"></div>
+
+  <div class="panel">
+    <h3 style="margin-top:0">Weekly activity</h3>
+    <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
+    <p class="empty-note">Bars: seeds/week (score-weighted). Diamonds: monthly assessment reads &mdash; hover for detail.</p>
+  </div>
+
+  <div class="panel" id="assessment-history-wrap" style="display:none">
+    <h3 style="margin-top:0">Assessment history</h3>
+    <table class="assessment-table">
+      <thead><tr><th>Date</th><th>Role</th><th>Phase</th><th>Confidence</th><th>CapEx/Sales</th><th>ROIC</th><th>Rev growth YoY</th></tr></thead>
+      <tbody id="assessment-rows"></tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h3 style="margin-top:0">Seeds</h3>
+    <div class="filters">
+      <select id="filter-role"><option value="">All roles</option></select>
+      <select id="filter-phase"><option value="">All phases</option></select>
+      <select id="filter-score">
+        <option value="0">Any score</option>
+        <option value="3">Score &ge; 3</option>
+        <option value="4">Score &ge; 4</option>
+      </select>
+    </div>
+    <ul class="seed-list" id="seed-list"></ul>
+  </div>
+</main>
+
+<footer class="site-footer">
+  Capital Cascade &mdash; automated tracker, updated daily (news) and monthly (financials).
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
+<script src="assets/data.js"></script>
+<script>
+(async function () {
+  const params = new URLSearchParams(location.search);
+  const sector = params.get("sector");
+  const titleEl = document.getElementById("sector-title");
+  const summaryEl = document.getElementById("sector-summary");
+
+  if (!sector || !CascadeData.SECTORS[sector]) {
+    titleEl.textContent = "Unknown sector";
+    summaryEl.innerHTML = '<p class="empty-note">No sector specified &mdash; go back to the overview and pick one.</p>';
+    return;
+  }
+
+  titleEl.textContent = CascadeData.sectorLabel(sector);
+
+  const { seeds, trends, assessments } = await CascadeData.loadAll();
+  const sectorTrends = CascadeData.trendsFor(trends, sector);
+  const sectorAssessments = assessments
+    .filter((a) => a.sector === sector)
+    .sort((a, b) => (a.run_date < b.run_date ? -1 : 1));
+  const sectorSeeds = CascadeData.seedsFor(seeds, sector);
+
+  // --- Summary panel -------------------------------------------------
+  const latest = sectorAssessments[sectorAssessments.length - 1];
+  if (latest) {
+    const color = CascadeData.PHASE_COLORS[latest.phase] || CascadeData.PHASE_COLORS.unclear;
+    summaryEl.innerHTML = `
+      <div class="tile-meta" style="font-size:14px;margin-bottom:8px">
+        <span>${CascadeData.ROLE_ICONS[latest.role] || ""} <strong>${latest.role}</strong></span>
+        <span class="phase-badge" style="background:${color}">${CascadeData.PHASE_LABELS[latest.phase] || latest.phase}</span>
+        <span>Confidence: ${latest.confidence} (${latest.confidence_score})</span>
+      </div>
+      <p class="empty-note">Last assessed ${CascadeData.fmtDate(latest.run_date)} from a ${latest.basket.length}-company basket
+      (${latest.basket.join(", ")})${latest.missing_tickers && latest.missing_tickers.length ? " &mdash; no data for " + latest.missing_tickers.join(", ") : ""}.</p>`;
+  } else {
+    summaryEl.innerHTML = '<p class="empty-note">No quantitative assessment yet for this sector (runs monthly).</p>';
+  }
+
+  // --- Chart -----------------------------------------------------------
+  const labels = sectorTrends.map((r) => r.period_start);
+  const scoreData = sectorTrends.map((r) => r.score_sum);
+  const countData = sectorTrends.map((r) => r.count);
+
+  // Place an assessment marker on the nearest week whose range contains it,
+  // else the closest preceding week.
+  function nearestIndex(runDate) {
+    let idx = -1;
+    for (let i = 0; i < sectorTrends.length; i++) {
+      if (sectorTrends[i].period_start <= runDate) idx = i;
+    }
+    return idx;
+  }
+  const markerData = labels.map(() => null);
+  sectorAssessments.forEach((a) => {
+    const idx = nearestIndex(a.run_date);
+    if (idx >= 0) markerData[idx] = scoreData[idx];
+  });
+
+  if (labels.length) {
+    new Chart(document.getElementById("trend-chart"), {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Score-weighted activity",
+            data: scoreData,
+            backgroundColor: "#5b8def88",
+            yAxisID: "y",
+            order: 2,
+          },
+          {
+            label: "Seeds",
+            data: countData,
+            type: "line",
+            borderColor: "#9aa0ac",
+            backgroundColor: "transparent",
+            yAxisID: "y1",
+            order: 1,
+          },
+          {
+            label: "Assessment read",
+            data: markerData,
+            type: "scatter",
+            pointStyle: "rectRot",
+            pointRadius: 8,
+            pointBackgroundColor: sectorAssessments.map((a) => CascadeData.PHASE_COLORS[a.phase] || CascadeData.PHASE_COLORS.unclear),
+            yAxisID: "y",
+            order: 0,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { position: "left", title: { display: true, text: "Score sum" } },
+          y1: { position: "right", grid: { drawOnChartArea: false }, title: { display: true, text: "Seed count" } },
+        },
+      },
+    });
+  } else {
+    document.querySelector(".chart-wrap").innerHTML = '<p class="empty-note">No weekly activity yet for this sector.</p>';
+  }
+
+  // --- Assessment history table -----------------------------------------
+  if (sectorAssessments.length) {
+    document.getElementById("assessment-history-wrap").style.display = "";
+    document.getElementById("assessment-rows").innerHTML = sectorAssessments
+      .slice()
+      .reverse()
+      .map((a) => `<tr>
+        <td>${CascadeData.fmtDate(a.run_date)}</td>
+        <td>${a.role}</td>
+        <td>${CascadeData.PHASE_LABELS[a.phase] || a.phase}</td>
+        <td>${a.confidence}</td>
+        <td>${a.metrics.capex_sales_pct != null ? a.metrics.capex_sales_pct + "%" : "&mdash;"}</td>
+        <td>${a.metrics.roic_pct != null ? a.metrics.roic_pct + "%" : "&mdash;"}</td>
+        <td>${a.metrics.revenue_growth_yoy_pct != null ? a.metrics.revenue_growth_yoy_pct + "%" : "&mdash;"}</td>
+      </tr>`)
+      .join("");
+  }
+
+  // --- Seed feed + filters ------------------------------------------------
+  const roleSel = document.getElementById("filter-role");
+  const phaseSel = document.getElementById("filter-phase");
+  const scoreSel = document.getElementById("filter-score");
+  const listEl = document.getElementById("seed-list");
+
+  [...new Set(sectorSeeds.map((s) => s.role))].forEach((r) => {
+    const o = document.createElement("option");
+    o.value = r; o.textContent = r;
+    roleSel.appendChild(o);
+  });
+  [...new Set(sectorSeeds.map((s) => s.phase))].forEach((p) => {
+    const o = document.createElement("option");
+    o.value = p; o.textContent = CascadeData.PHASE_LABELS[p] || p;
+    phaseSel.appendChild(o);
+  });
+
+  function render() {
+    const role = roleSel.value, phase = phaseSel.value, minScore = Number(scoreSel.value);
+    const filtered = sectorSeeds.filter((s) =>
+      (!role || s.role === role) && (!phase || s.phase === phase) && (s.score || 0) >= minScore);
+
+    listEl.innerHTML = filtered.length
+      ? filtered.map((s) => `
+        <li class="seed-item">
+          <a class="seed-headline" href="${s.url}" target="_blank" rel="noopener">${s.headline}</a>
+          <div class="seed-meta">${CascadeData.ROLE_ICONS[s.role] || ""} ${s.role} &middot; ${CascadeData.PHASE_LABELS[s.phase] || s.phase} &middot; score ${s.score} &middot; ${s.source} &middot; ${CascadeData.fmtDate(s.published)}</div>
+          <div class="seed-why">${s.why || ""}</div>
+        </li>`).join("")
+      : '<p class="empty-note">No seeds match these filters.</p>';
+  }
+  [roleSel, phaseSel, scoreSel].forEach((el) => el.addEventListener("change", render));
+  render();
+})();
+</script>
+</body>
+</html>

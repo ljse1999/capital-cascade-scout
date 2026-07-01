@@ -26,11 +26,16 @@ jobs:
       - name: Run the sector assessment
         run: python -m scout.sector_assessment
 
+      - name: Sync data into docs/ for GitHub Pages
+        run: |
+          mkdir -p docs/data
+          cp data/*.jsonl docs/data/
+
       - name: Commit assessment
         run: |
           git config user.name  "cascade-scout"
           git config user.email "actions@github.com"
-          git add data/
+          git add data/ docs/data/
           if git diff --staged --quiet; then
             echo "No new assessment to commit."
           else
