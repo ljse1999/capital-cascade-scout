@@ -82,20 +82,18 @@ The framework rubric the LLM scores against is **`scout/rubric.md`** — edit th
 what counts as a good seed as your thinking on the framework develops.
 
 ## Swapping providers
-Default is **GLM (`glm`)**. To switch, set a repo **variable** `LLM_PROVIDER` (Settings →
+Default is **MiniMax (`minimax`)**. To switch, set a repo **variable** `LLM_PROVIDER` (Settings →
 Secrets and variables → Actions → *Variables*) and add the matching secret:
 
 | `LLM_PROVIDER` | Secret name | Default model | Endpoint |
 |---|---|---|---|
-| `glm` (default) | `ZAI_API_KEY` | `glm-4.6` | z.ai (OpenAI-compatible) |
-| `deepseek` | `DEEPSEEK_API_KEY` | `deepseek-chat` | api.deepseek.com |
-| `openai` | `OPENAI_API_KEY` | `gpt-4o-mini` | OpenAI |
-| `gemini` | `GEMINI_API_KEY` | `gemini-2.0-flash` | Google (uncomment in requirements.txt) |
-| `anthropic` | `ANTHROPIC_API_KEY` | `claude-haiku-4-5` | Anthropic (uncomment in requirements.txt) |
+| `minimax` (default) | `MINIMAX_API_KEY` | `MiniMax-M3` | api.minimax.io/v1 (OpenAI-compatible) |
+| `glm` | `ZAI_API_KEY` | `glm-5.2` | z.ai (OpenAI-compatible) |
+| `deepseek` | `DEEPSEEK_API_KEY` | `deepseek-v4-pro` | api.deepseek.com (OpenAI-compatible) |
 
-Override the model with an `LLM_MODEL` variable (e.g. set it to your exact z.ai or DeepSeek
-model string). `glm`, `deepseek` and `openai` all use the `openai` SDK already in
-`requirements.txt`, so no dependency change is needed to move between them.
+Override the model with an `LLM_MODEL` variable (e.g. set it to your exact model string).
+All three providers use the `openai` SDK already in `requirements.txt`, so no dependency
+change is needed to move between them.
 
 ## What's deliberately *not* in v1
 Social media (X is costly, Reddit/StockTwits are v2) and macro series from FRED. Both are

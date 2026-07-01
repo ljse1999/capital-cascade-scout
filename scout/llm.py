@@ -1,10 +1,10 @@
 """Provider-swappable cheap-LLM call. Pick the provider with the env var
-LLM_PROVIDER (gemini | openai | anthropic). Each uses its cheapest capable
+LLM_PROVIDER (minimax | glm | deepseek). Each uses its cheapest capable
 model by default; override with LLM_MODEL. Only ONE API key is needed.
 
 Cost note: this is the only paid step in the whole pipeline. We send one
 batched request per day, so the daily cost is fractions of a cent on any of
-these models. Gemini Flash also has a free tier that often covers it entirely.
+these models.
 """
 
 from __future__ import annotations
@@ -51,15 +51,8 @@ def _extract_json(text: str):
 
 
 def complete(system: str, user: str) -> str:
-    provider = os.environ.get("LLM_PROVIDER", "gemini").lower()
+    provider = os.environ.get("LLM_PROVIDER", "minimax").lower()
     model = os.environ.get("LLM_MODEL", DEFAULT_MODELS[provider])
-
-    if provider == "gemini":
-        import google.generativeai as genai
-        genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-        gm = genai.GenerativeModel(model, system_instruction=system)
-        resp = gm.generate_content(user)
-        return resp.text
 
     if provider in OPENAI_COMPATIBLE:
         from openai import OpenAI
@@ -73,15 +66,6 @@ def complete(system: str, user: str) -> str:
                       {"role": "user", "content": user}],
         )
         return resp.choices[0].message.content
-
-    if provider == "anthropic":
-        import anthropic
-        client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-        resp = client.messages.create(
-            model=model, max_tokens=4096, system=system,
-            messages=[{"role": "user", "content": user}],
-        )
-        return resp.content[0].text
 
     raise ValueError(f"Unknown LLM_PROVIDER: {provider}")
 

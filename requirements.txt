@@ -1,7 +1,5 @@
 feedparser>=6.0
 PyYAML>=6.0
 yfinance>=0.2.40
-# LLM client. The openai SDK also drives GLM (z.ai) and DeepSeek via base_url.
-openai>=1.40               # LLM_PROVIDER=glm (default) | deepseek | openai
-# google-generativeai>=0.8 # LLM_PROVIDER=gemini
-# anthropic>=0.40          # LLM_PROVIDER=anthropic
+# LLM client. The openai SDK drives minimax, GLM (z.ai) and DeepSeek via base_url.
+openai>=1.40               # LLM_PROVIDER=minimax (default) | glm | deepseek

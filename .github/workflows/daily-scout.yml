@@ -25,13 +25,11 @@ jobs:
 
       - name: Run the scout
         env:
-          LLM_PROVIDER: ${{ vars.LLM_PROVIDER || 'glm' }}
+          LLM_PROVIDER: ${{ vars.LLM_PROVIDER || 'minimax' }}
           LLM_MODEL: ${{ vars.LLM_MODEL }}
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
           ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python -m scout.run
 
       - name: Commit digest
