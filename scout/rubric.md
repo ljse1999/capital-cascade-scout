@@ -43,7 +43,6 @@ And tag the cascade PHASE the item points to:
 - A timing tension: the loudest narrative sitting right at peak investment.
 - An Enabler angle: a critical input getting cheap because someone overbuilt.
 - Something falsifiable and trackable over time (supply you can count).
-- Name the chain, not the category. Where you reasonably can, identify the *specific companies* on each side of the linkage — the actual Investor(s) doing the building and the actual Supplier(s) booking the revenue, reaching down to tier-2/3 names where they're knowable (not "chip equipment makers" but ASML, Applied Materials, Tokyo Electron; not "Korean construction" but Samsung C&T, Daewoo E&C). Naming private firms is welcome — a company never has to be publicly listed to be worth naming. This is a preference, not a gate: if you can only name the layer, keep the seed anyway.
 
 ## What to DROP
 
@@ -108,7 +107,7 @@ For each item you keep, return JSON with:
 - `why`: ONE sentence on why it fits the cascade and what it evidences.
 - `data_to_pull`: short list of specific data points worth fetching to develop it
   (e.g. "ASML 2026 backlog", "US electricity capex YoY", tickers to chart).
-- `tickers`: tickers for any *publicly listed* names you mention above, for price enrichment. Leave as [] when the actors are private or you're unsure — never invent, guess, or approximate a ticke to fill the field.
+- `tickers`: list of stock tickers implicated (for price enrichment), or [].
 
 Drop only items scoring below 2. Be terse and concrete. Reward numbers and clean
 linkages. Default to KEEPING — return everything that qualifies, however long the list.
