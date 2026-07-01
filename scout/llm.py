@@ -13,18 +13,17 @@ import json
 import os
 
 DEFAULT_MODELS = {
-    "gemini": "gemini-2.0-flash",
-    "openai": "gpt-4o-mini",
-    "anthropic": "claude-haiku-4-5-20251001",
     "glm": "glm-5.2",
-    "deepseek": "deepseek-chat",
+    "deepseek": "deepseek-v4-pro",
+    "minimax": "MiniMax-M3",
+    
 }
 
 # OpenAI-compatible providers: same SDK, different base_url + key env var.
 OPENAI_COMPATIBLE = {
-    "openai":   {"base_url": None,                            "key": "OPENAI_API_KEY"},
     "glm":      {"base_url": "https://api.z.ai/api/paas/v4",  "key": "ZAI_API_KEY"},
     "deepseek": {"base_url": "https://api.deepseek.com",      "key": "DEEPSEEK_API_KEY"},
+    "minimax": {"base_url": "https://api.minimax.io/v1",      "key": "MINIMAX_API_KEY"},
 }
 
 
