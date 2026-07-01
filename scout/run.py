@@ -1,6 +1,6 @@
 """Orchestrator. Run with:  python -m scout.run
-Pipeline: ingest (free) -> LLM triage (one cheap call) -> enrich (free)
--> write a dated digest markdown into ../digests/."""
+Pipeline: ingest (free) -> dedup vs prior days -> LLM triage (one cheap call)
+-> enrich (free) -> write a dated digest markdown into ../digests/."""
 
 from __future__ import annotations
 
@@ -9,10 +9,11 @@ from datetime import datetime, timezone
 
 import yaml
 
-from . import ingest, synthesize, enrich
+from . import ingest, synthesize, enrich, seen
 
 ROOT = pathlib.Path(__file__).parent.parent
 DIGEST_DIR = ROOT / "digests"
+SEEN_PATH = DIGEST_DIR / "_seen.json"
 
 ROLE_EMOJI = {"investor": "🏗️", "supplier": "⛏️", "enabler": "🎟️",
               "macro": "🌐", "unclear": "❔"}
@@ -76,8 +77,14 @@ def main():
     candidates = ingest.fetch(cfg)
     print(f"     {len(candidates)} candidates after pre-filter")
 
+    # Drop anything already emitted on a previous day's run (headline-keyed).
+    already = seen.load_seen(SEEN_PATH)
+    fresh = seen.filter_unseen(candidates, already)
+    print(f"     {len(candidates) - len(fresh)} dropped as already-seen; "
+          f"{len(fresh)} fresh")
+
     print("2/4 LLM triage…")
-    scored = synthesize.score_candidates(candidates)
+    scored = synthesize.score_candidates(fresh)
     print(f"     {len(scored)} seeds kept (score >= 2)")
 
     print("3/4 finance enrichment…")
@@ -91,6 +98,11 @@ def main():
     out_path = DIGEST_DIR / f"seeds-{today}.md"
     out_path.write_text(build_digest(scored, context), encoding="utf-8")
     print(f"     wrote {out_path}")
+
+    # Only now — after a successful write — remember what we processed, so a
+    # crashed run never suppresses stories it failed to emit.
+    seen.record(SEEN_PATH, fresh)
+    print(f"     seen-store updated ({SEEN_PATH.name})")
 
 
 if __name__ == "__main__":
