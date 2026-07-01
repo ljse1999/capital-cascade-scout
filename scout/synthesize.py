@@ -41,6 +41,8 @@ def score_candidates(items) -> list[dict]:
         if s["score"] >= 2:
             s.setdefault("tickers", [])
             s.setdefault("data_to_pull", [])
+            s.setdefault("sector", "other_emerging")
+            s.setdefault("sector_note", "")
             out.append(s)
     out.sort(key=lambda s: s["score"], reverse=True)
     return out

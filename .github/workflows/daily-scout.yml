@@ -36,7 +36,7 @@ jobs:
         run: |
           git config user.name  "cascade-scout"
           git config user.email "actions@github.com"
-          git add digests/
+          git add digests/ data/
           if git diff --staged --quiet; then
             echo "No new digest to commit."
           else

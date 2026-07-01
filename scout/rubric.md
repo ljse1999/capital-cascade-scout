@@ -94,6 +94,37 @@ Balance two things:
 In short: keep MANY angles on the big cycles AND the best of the small ones. When
 in doubt, KEEP it.
 
+## Sector taxonomy
+
+Every item also gets tagged with the ONE industry/sector it's primarily about (the
+Investor or Supplier whose capex/revenue is the actual news, not every company
+mentioned in passing). Pick exactly one from this closed list:
+
+- `semiconductors` — fabs, foundries, chip equipment
+- `data_centers_ai_infra` — hyperscaler/AI data-center buildout, cooling, servers
+- `power_utilities_grid` — generation, transmission, grid equipment
+- `lng_gas` — LNG export/import terminals, gas infrastructure
+- `oil_gas_refining` — upstream oil/gas, refining capacity
+- `mining_metals` — mine expansion, copper/lithium/nickel/other metals
+- `industrial_materials` — steel, aluminium, cement, other basic materials
+- `chemicals_petrochemicals`
+- `battery_ev` — gigafactories, EV plants, battery supply chain
+- `autos` — non-EV-specific auto manufacturing capacity
+- `shipbuilding_shipping` — fleet orders, shipyards, dry/wet bulk capacity
+- `aerospace_defence` — aircraft, defence production, backlogs
+- `pharma_biomanufacturing`
+- `construction_homebuilding`
+- `agriculture` — farming capacity, fertiliser plants
+- `airlines` — fleet expansion from the airline (buyer) side
+- `telecom` — fibre, network capex
+- `other_emerging` — anything that doesn't fit above (a genuinely new capex
+  cycle forming outside this list). When you use this, ALSO fill `sector_note`
+  with a short 2–4 word label of the actual theme (e.g. "uranium enrichment",
+  "space launch capacity") so it can be reviewed for promotion into the list later.
+
+This tag exists to track cascade activity by sector over time, so be consistent:
+the same company/theme should get the same sector tag run over run.
+
 ## Output
 
 For each item you keep, return JSON with:
@@ -101,6 +132,9 @@ For each item you keep, return JSON with:
 - `headline`, `url`, `source`, `published`
 - `role`: one of investor | supplier | enabler | macro | unclear
 - `phase`: one of boom | peak | bust | trough | unclear
+- `sector`: one of the taxonomy values above.
+- `sector_note`: short free-text label, ONLY populated when `sector` is
+  `other_emerging`; otherwise omit or leave "".
 - `score`: 1–5. 5 = flagship-essay seed; 4 = strong seed; 3 = solid data point
   worth logging; 2 = minor but usable data point; 1 = no real cascade content.
   Most items are 2–3 and that is FINE — keep them. Reserve harshness for 1s only.

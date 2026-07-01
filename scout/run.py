@@ -9,16 +9,27 @@ from datetime import datetime, timezone
 
 import yaml
 
-from . import ingest, synthesize, enrich, seen
+from . import ingest, synthesize, enrich, seen, store
 
 ROOT = pathlib.Path(__file__).parent.parent
 DIGEST_DIR = ROOT / "digests"
+DATA_DIR = ROOT / "data"
 SEEN_PATH = DIGEST_DIR / "_seen.json"
+SEEDS_STORE_PATH = DATA_DIR / "seeds.jsonl"
 
 ROLE_EMOJI = {"investor": "🏗️", "supplier": "⛏️", "enabler": "🎟️",
               "macro": "🌐", "unclear": "❔"}
 PHASE_LABEL = {"boom": "Boom", "peak": "Peak ⚠️", "bust": "Bust",
                "trough": "Trough", "unclear": "—"}
+
+
+def _sector_label(s: dict) -> str:
+    sector = (s.get("sector") or "other_emerging")
+    note = s.get("sector_note") or ""
+    label = sector.replace("_", " ")
+    if sector == "other_emerging" and note:
+        label = f"other: {note}"
+    return label
 
 
 def _fmt_item(s: dict) -> str:
@@ -28,6 +39,7 @@ def _fmt_item(s: dict) -> str:
     lines = [
         f"### {ROLE_EMOJI.get(role, '❔')} {s.get('headline', '(no headline)')}",
         f"**{stars}** · _{role}_ · _{PHASE_LABEL.get(phase, phase)}_ · "
+        f"_{_sector_label(s)}_ · "
         f"{s.get('source', '')} · {s.get('published', '')[:10]}",
         "",
         s.get("why", ""),
@@ -98,6 +110,9 @@ def main():
     out_path = DIGEST_DIR / f"seeds-{today}.md"
     out_path.write_text(build_digest(scored, context), encoding="utf-8")
     print(f"     wrote {out_path}")
+
+    n_stored = store.append_records(SEEDS_STORE_PATH, scored, today)
+    print(f"     appended {n_stored} records to {SEEDS_STORE_PATH.relative_to(ROOT)}")
 
     # Only now — after a successful write — remember what we processed, so a
     # crashed run never suppresses stories it failed to emit.
