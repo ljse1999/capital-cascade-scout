@@ -67,4 +67,16 @@ def complete(system: str, user: str) -> str:
         spec = OPENAI_COMPATIBLE[provider]
         # LLM_BASE_URL overrides the default endpoint if you ever need to.
         base_url = os.environ.get("LLM_BASE_URL", spec["base_url"])
-        client = OpenAI(api_key=os.environ[spec["key"]], base_url=base_url, timeout=600,
+        client = OpenAI(api_key=os.environ[spec["key"]], base_url=base_url, timeout=600, max_retries=0)
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "system", "content": system},
+                      {"role": "user", "content": user}],
+        )
+        return resp.choices[0].message.content
+
+    raise ValueError(f"Unknown LLM_PROVIDER: {provider}")
+
+
+def complete_json(system: str, user: str):
+    return _extract_json(complete(system, user))
