@@ -9,13 +9,14 @@ from datetime import datetime, timezone
 
 import yaml
 
-from . import ingest, synthesize, enrich, seen, store
+from . import ingest, synthesize, enrich, seen, store, trends
 
 ROOT = pathlib.Path(__file__).parent.parent
 DIGEST_DIR = ROOT / "digests"
 DATA_DIR = ROOT / "data"
 SEEN_PATH = DIGEST_DIR / "_seen.json"
 SEEDS_STORE_PATH = DATA_DIR / "seeds.jsonl"
+SECTOR_TRENDS_PATH = DATA_DIR / "sector_trends.jsonl"
 
 ROLE_EMOJI = {"investor": "🏗️", "supplier": "⛏️", "enabler": "🎟️",
               "macro": "🌐", "unclear": "❔"}
@@ -113,6 +114,10 @@ def main():
 
     n_stored = store.append_records(SEEDS_STORE_PATH, scored, today)
     print(f"     appended {n_stored} records to {SEEDS_STORE_PATH.relative_to(ROOT)}")
+
+    n_trend_rows = trends.build_and_write(SEEDS_STORE_PATH, SECTOR_TRENDS_PATH)
+    print(f"     rebuilt {n_trend_rows} sector-week rows in "
+          f"{SECTOR_TRENDS_PATH.relative_to(ROOT)}")
 
     # Only now — after a successful write — remember what we processed, so a
     # crashed run never suppresses stories it failed to emit.

@@ -107,13 +107,13 @@ mentioned in passing). Pick exactly one from this closed list:
 - `oil_gas_refining` — upstream oil/gas, refining capacity
 - `mining_metals` — mine expansion, copper/lithium/nickel/other metals
 - `industrial_materials` — steel, aluminium, cement, other basic materials
-- `chemicals_petrochemicals`
+- `chemicals_petrochemicals` — petrochemical/specialty chemical plant capacity
 - `battery_ev` — gigafactories, EV plants, battery supply chain
 - `autos` — non-EV-specific auto manufacturing capacity
 - `shipbuilding_shipping` — fleet orders, shipyards, dry/wet bulk capacity
 - `aerospace_defence` — aircraft, defence production, backlogs
-- `pharma_biomanufacturing`
-- `construction_homebuilding`
+- `pharma_biomanufacturing` — drug manufacturing plants, biologics capacity
+- `construction_homebuilding` — homebuilders, general construction capacity
 - `agriculture` — farming capacity, fertiliser plants
 - `airlines` — fleet expansion from the airline (buyer) side
 - `telecom` — fibre, network capex

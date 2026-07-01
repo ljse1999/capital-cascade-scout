@@ -99,15 +99,42 @@ change is needed to move between them.
 Social media (X is costly, Reddit/StockTwits are v2) and macro series from FRED. Both are
 easy add-ons once the core is earning its keep.
 
+## The Cascade Tracker (data layer, feeds a future dashboard)
+
+Every seed the LLM keeps now also gets a `sector` tag (closed taxonomy in `scout/rubric.md`)
+alongside its role/phase, and the daily run persists structured history — not just the
+throwaway markdown digest — into three files under `data/`:
+
+- **`data/seeds.jsonl`** — append-only log, one line per article ever kept, with a stable
+  id (hashed URL). This is the raw "news as it hits" feed.
+- **`data/sector_trends.jsonl`** — a derived, fully-rebuilt weekly rollup per sector (count,
+  score-weighted intensity, role mix, phase mix, top seeds), regenerated from `seeds.jsonl`
+  on every run. Never hand-edit this file — it's a materialized view, not a source of truth.
+- **`data/sector_assessments.jsonl`** — a slower, monthly quantitative read on each tracked
+  sector (`scout/sector_assessment.py`, run by `.github/workflows/monthly-assessment.yml`).
+  It reproduces the Capital Cascade Classifier skill's scoring methodology (CapEx intensity,
+  ROIC, EBIT margin trend, overbuild ratio -> archetype score -> phase) using `yfinance`
+  instead of the Bigdata connector the interactive skill depends on, so it can run
+  unattended. This is append-only — each month's read is a genuine new data point, not
+  something to regenerate. `other_emerging` has no fixed basket by design; watch it via the
+  `sector_note` field on individual seeds instead.
+
+Together these three files are meant to be the entire data layer a future interactive
+dashboard reads from — no database needed at this scale.
+
 ## Files
 ```
 config.yaml                     sources, keywords, watchlist (edit this)
 requirements.txt
-.github/workflows/daily-scout.yml   the daily schedule
-scout/rubric.md                 the Capital Cascade scoring rubric (edit this)
+.github/workflows/daily-scout.yml       the daily schedule
+.github/workflows/monthly-assessment.yml   the monthly sector assessment schedule
+scout/rubric.md                 the Capital Cascade scoring rubric incl. sector taxonomy (edit this)
 scout/ingest.py                 free RSS fetch + keyword filter + dedupe
 scout/synthesize.py             the one cheap LLM triage call
 scout/llm.py                    provider-swappable LLM wrapper
 scout/enrich.py                 yfinance price context
-scout/run.py                    orchestrator -> digests/seeds-<date>.md
+scout/store.py                  appends scored seeds -> data/seeds.jsonl
+scout/trends.py                 rebuilds data/sector_trends.jsonl from seeds.jsonl
+scout/sector_assessment.py      monthly yfinance-based sector role/phase read -> data/sector_assessments.jsonl
+scout/run.py                    orchestrator -> digests/seeds-<date>.md + data/
 ```
