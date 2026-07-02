@@ -1,140 +1,168 @@
 # Capital Cascade Scout
 
-A cheap daily robot that scans the news for things that fit the **Capital Cascade**
-framework and writes you a dated digest of *idea seeds* — capex commitments, supplier
-backlogs, oversupply/cancellation signals, distressed-asset (enabler) angles — each tagged
-by role (investor / supplier / enabler) and cascade phase (boom / peak / bust / trough),
-with specific data points worth pulling.
+An automated research pipeline that scans daily news for signals fitting the
+**Capital Cascade** framework — a lens for tracking how one industry's capex
+becomes another industry's revenue, and eventually someone's oversupply. The
+scout turns that framework into a running, structured dataset: a daily
+LLM-triaged news feed, a monthly quantitative sector read, and a public
+dashboard that visualizes both.
 
-## How it keeps cost near zero
+Built to run unattended on GitHub Actions for pennies a day.
 
-Two tiers. The expensive part (an LLM) only runs **once per day** on a pre-filtered shortlist:
-
-1. **Free, no LLM:** Google News RSS (no key) → keyword pre-filter against cascade
-   vocabulary → dedupe. This does ~95% of the work for £0.
-2. **One cheap LLM call/day:** the shortlist goes to a small model (Gemini Flash by
-   default) which scores and tags each item against the framework rubric. Pennies, or free
-   on Gemini's free tier.
-3. **Free enrichment:** `yfinance` attaches a price + 1-year move to any tickers flagged,
-   plus a bellwether watchlist, so a "boom narrative" can be checked against the tape.
-
-The output is `digests/seeds-YYYY-MM-DD.md`. Keep Cowork/Opus for actually *writing the
-articles* — that's where premium tokens earn their keep.
+**Live dashboard:** [ljse1999.github.io/capital-cascade-scout](https://ljse1999.github.io/capital-cascade-scout/)
 
 ---
 
-## One-time setup (about 15 minutes)
+## What it does
 
-### 1. Get one API key
-Default is **GLM (z.ai)** — use your existing z.ai key. (DeepSeek, OpenAI, Gemini and
-Anthropic also supported — see "Swapping providers".)
+The pipeline has three layers that run on independent schedules and write
+into a shared, append-only data store.
 
-### 2. Create a GitHub repo
-- Make a **new repository** on GitHub (private is fine), e.g. `capital-cascade-scout`.
-- Upload the entire contents of this `capital-cascade-scout` folder into it (drag-and-drop
-  in the GitHub web UI works — keep the folder structure, including `.github/`).
+```
+Google News RSS + yfinance              (free, no key)
+        │  keyword pre-filter, dedupe
+        ▼
+One batched LLM call / day              (~$0.05–0.10)
+        │  scores + tags each candidate: role, phase, sector
+        ▼
+data/seeds.jsonl                        (raw log, one line per kept article)
+        │
+        ├─► data/sector_trends.jsonl    weekly rollup, rebuilt each run
+        │
+        └─► data/sector_assessments.jsonl   monthly quantitative sector read
+                                             (yfinance-derived, no LLM)
+                        │
+                        ▼
+              docs/  (GitHub Pages dashboard)
+```
 
-### 3. Add your key as a secret
-In the repo: **Settings → Secrets and variables → Actions → New repository secret**
-- Name: `ZAI_API_KEY`  ·  Value: *(your z.ai key)*
+**1. Daily scout** (`scout/run.py`, runs 06:30 UTC via
+`.github/workflows/daily-scout.yml`)
+Pulls Google News RSS across a three-tier query set (durable mechanism
+queries, a sweep across 17 capex-heavy sectors, and an "emerging cycle" radar
+for new booms forming outside the known list), keyword-filters for free, then
+sends the shortlist to a small LLM in a single batched call. The model scores
+each item against `scout/rubric.md` — tagging it by **role** (investor /
+supplier / enabler), **cascade phase** (boom / peak / bust / trough), and
+**sector** — and flags tickers for price enrichment via `yfinance`. Output:
+a markdown digest (`digests/seeds-YYYY-MM-DD.md`) and a structured append to
+`data/seeds.jsonl`.
 
-### 4. Turn it on
-The schedule (06:30 UTC daily) is already defined in `.github/workflows/daily-scout.yml`.
-To check it works now, go to the **Actions** tab → *Capital Cascade Daily Scout* →
-**Run workflow**. After a minute it commits a digest into `digests/`.
+**2. Monthly sector assessment** (`scout/sector_assessment.py`, runs on the
+1st via `.github/workflows/monthly-assessment.yml`)
+A separate, no-LLM quantitative read on all 17 taxonomy sectors — reproducing
+a capital-cycle classification methodology (CapEx intensity, ROIC, EBIT
+margin trend, revenue growth, overbuild ratio → phase) purely from `yfinance`
+fundamentals across a basket of ~65 tickers. Appends one row per
+sector/month to `data/sector_assessments.jsonl`.
 
-> First-time note: GitHub disables scheduled Actions on brand-new repos until you've
-> enabled Actions once (the Actions tab will prompt you). A manual "Run workflow" both
-> tests it and satisfies that.
-
-### 5. Get digests into your Capital Cascade folder (OneDrive sync)
-A cloud Action can't write to your PC directly, so do this once:
-- Install GitHub Desktop (easiest) or Git.
-- **Clone the repo into your OneDrive folder**, e.g. to
-  `…/OneDrive/Documents/Capital Cascade/capital-cascade-scout-repo`.
-- Each morning, open GitHub Desktop and hit **Fetch/Pull** (or let it auto-fetch). The new
-  `digests/seeds-*.md` files land in that folder and OneDrive syncs them to all your devices.
-
-Prefer it fully hands-off? Say the word and I'll switch the workflow to **email** each
-digest to you instead of (or as well as) committing it — no cloning needed.
+**3. Dashboard** (`docs/`, static site on GitHub Pages)
+A framework-free HTML/CSS/JS site that reads the three JSONL files directly
+client-side: a sector overview (phase, trend direction, recent activity), a
+per-sector drill-down (Chart.js trend chart + assessment history + filtered
+seed feed), and a searchable timeline of every seed ever kept.
 
 ---
 
-## Running it locally (optional, for testing)
+## Design goals
+
+- **Near-zero marginal cost.** The only paid step is one batched LLM call per
+  day (~$0.05–0.10 at `max_candidates: 150`). Everything else — ingestion,
+  enrichment, the monthly assessment, the dashboard — is free.
+- **Provider-agnostic LLM layer.** `scout/llm.py` swaps between GLM (z.ai,
+  current default), MiniMax, and DeepSeek via one environment variable, all
+  through the OpenAI-compatible SDK — no code changes to switch.
+- **No database.** Three flat JSONL files (one append-only raw log, one
+  derived/rebuilt rollup, one append-only monthly log) are the entire data
+  layer, read directly by a static dashboard. Sufficient at this scale, easy
+  to reason about, and git-versioned for free.
+- **Idempotent by design.** `scout/store.py` hashes each URL into a stable
+  id and skips anything already logged, so re-runs and overlapping lookback
+  windows never duplicate data.
+
+---
+
+## Repo layout
+
+```
+scout/
+  ingest.py                free RSS fetch + keyword pre-filter + dedupe
+  synthesize.py            the one paid LLM triage call
+  llm.py                   provider-swappable LLM client (minimax | glm | deepseek)
+  enrich.py                yfinance price context for flagged tickers
+  store.py                 appends scored seeds -> data/seeds.jsonl (stable-id dedupe)
+  trends.py                rebuilds data/sector_trends.jsonl from seeds.jsonl
+  sector_assessment.py     monthly yfinance-based sector role/phase read
+  run.py                   daily orchestrator -> digest + data/
+  rubric.md                the Capital Cascade scoring rubric + sector taxonomy
+data/                      seeds.jsonl, sector_trends.jsonl, sector_assessments.jsonl
+digests/                   dated markdown digests (human-readable daily output)
+docs/                      static dashboard, served via GitHub Pages
+.github/workflows/         daily-scout.yml, monthly-assessment.yml
+config.yaml                queries, cost guardrails, watchlist
+```
+
+---
+
+## Running it locally
+
 ```bash
+git clone https://github.com/ljse1999/capital-cascade-scout.git
 cd capital-cascade-scout
-python -m venv .venv && . .venv/Scripts/activate   # Windows
+python -m venv .venv && source .venv/bin/activate   # .venv\Scripts\activate on Windows
 pip install -r requirements.txt
-setx GEMINI_API_KEY "your-key"      # then reopen the terminal
-python -m scout.run                 # writes digests/seeds-<today>.md
 
-# Just see what the free filter catches, no LLM/key needed:
+export LLM_PROVIDER=glm
+export ZAI_API_KEY=your-key
+python -m scout.run                 # writes digests/seeds-<today>.md + data/
+
+# Free filter only, no LLM/key needed:
 python -m scout.ingest
+
+# Monthly sector read (no LLM, no key):
+python -m scout.sector_assessment
 ```
 
-## Tuning it
-Everything lives in **`config.yaml`** — no code changes needed:
-- `google_news_queries` — add/remove search angles (broad scan by default).
-- `lookback_days`, `max_candidates`, `min_prefilter_hits` — recall vs. cost.
-- `context_watchlist` — the bellwether tickers shown at the foot of each digest.
+## Configuration
 
-The framework rubric the LLM scores against is **`scout/rubric.md`** — edit this to sharpen
-what counts as a good seed as your thinking on the framework develops.
+Everything tunable lives in `config.yaml` — no code changes needed:
 
-## Swapping providers
-Default is **MiniMax (`minimax`)**. To switch, set a repo **variable** `LLM_PROVIDER` (Settings →
-Secrets and variables → Actions → *Variables*) and add the matching secret:
+- `google_news_queries` — the three-tier search set (durable / sector sweep / emerging).
+- `lookback_days`, `max_candidates`, `min_prefilter_hits` — recall vs. LLM cost.
+- `context_watchlist` — bellwether ETF tickers shown as macro context in each digest.
 
-| `LLM_PROVIDER` | Secret name | Default model | Endpoint |
+The classification logic itself — role/phase definitions, what makes a good
+seed, the sector taxonomy, output schema — lives in `scout/rubric.md` and is
+the part most worth reading to understand how the framework is operationalized.
+
+## Swapping LLM providers
+
+| `LLM_PROVIDER` | Secret | Default model | Endpoint |
 |---|---|---|---|
-| `minimax` (default) | `MINIMAX_API_KEY` | `MiniMax-M3` | api.minimax.io/v1 (OpenAI-compatible) |
-| `glm` | `ZAI_API_KEY` | `glm-5.2` | z.ai (OpenAI-compatible) |
-| `deepseek` | `DEEPSEEK_API_KEY` | `deepseek-v4-pro` | api.deepseek.com (OpenAI-compatible) |
+| `glm` (current default) | `ZAI_API_KEY` | `glm-5.2` | api.z.ai (OpenAI-compatible) |
+| `minimax` | `MINIMAX_API_KEY` | `MiniMax-M3` | api.minimax.io/v1 |
+| `deepseek` | `DEEPSEEK_API_KEY` | `deepseek-v4-pro` | api.deepseek.com |
 
-Override the model with an `LLM_MODEL` variable (e.g. set it to your exact model string).
-All three providers use the `openai` SDK already in `requirements.txt`, so no dependency
-change is needed to move between them.
+The live GitHub Actions runs are pinned to GLM via the `LLM_PROVIDER` repo
+variable in **Settings → Secrets and variables → Actions**; change that
+variable (and the matching secret) to switch providers. Override the model
+with an `LLM_MODEL` variable. All three run through the `openai` SDK, so no
+dependency changes are needed to move between them.
 
-## What's deliberately *not* in v1
-Social media (X is costly, Reddit/StockTwits are v2) and macro series from FRED. Both are
-easy add-ons once the core is earning its keep.
+## What's deliberately out of scope (v1)
 
-## The Cascade Tracker (data layer, feeds a future dashboard)
+Social media (X/Reddit/StockTwits) and FRED macro series — both are natural
+follow-ons once the core pipeline has a track record.
 
-Every seed the LLM keeps now also gets a `sector` tag (closed taxonomy in `scout/rubric.md`)
-alongside its role/phase, and the daily run persists structured history — not just the
-throwaway markdown digest — into three files under `data/`:
+## Roadmap
 
-- **`data/seeds.jsonl`** — append-only log, one line per article ever kept, with a stable
-  id (hashed URL). This is the raw "news as it hits" feed.
-- **`data/sector_trends.jsonl`** — a derived, fully-rebuilt weekly rollup per sector (count,
-  score-weighted intensity, role mix, phase mix, top seeds), regenerated from `seeds.jsonl`
-  on every run. Never hand-edit this file — it's a materialized view, not a source of truth.
-- **`data/sector_assessments.jsonl`** — a slower, monthly quantitative read on each tracked
-  sector (`scout/sector_assessment.py`, run by `.github/workflows/monthly-assessment.yml`).
-  It reproduces the Capital Cascade Classifier skill's scoring methodology (CapEx intensity,
-  ROIC, EBIT margin trend, overbuild ratio -> archetype score -> phase) using `yfinance`
-  instead of the Bigdata connector the interactive skill depends on, so it can run
-  unattended. This is append-only — each month's read is a genuine new data point, not
-  something to regenerate. `other_emerging` has no fixed basket by design; watch it via the
-  `sector_note` field on individual seeds instead.
+- Sector-specific overrides for the monthly assessment (a handful of sectors —
+  e.g. cyclical autos — currently mis-classify on pure margin data alone).
+- Tighter phase-detection thresholds for the "capex still rising while ROIC
+  has eroded" late-cycle case, currently bucketed as `unclear`.
+- Linking the live dashboard from the Capital Cascade blog once it launches.
 
-Together these three files are meant to be the entire data layer a future interactive
-dashboard reads from — no database needed at this scale.
+---
 
-## Files
-```
-config.yaml                     sources, keywords, watchlist (edit this)
-requirements.txt
-.github/workflows/daily-scout.yml       the daily schedule
-.github/workflows/monthly-assessment.yml   the monthly sector assessment schedule
-scout/rubric.md                 the Capital Cascade scoring rubric incl. sector taxonomy (edit this)
-scout/ingest.py                 free RSS fetch + keyword filter + dedupe
-scout/synthesize.py             the one cheap LLM triage call
-scout/llm.py                    provider-swappable LLM wrapper
-scout/enrich.py                 yfinance price context
-scout/store.py                  appends scored seeds -> data/seeds.jsonl
-scout/trends.py                 rebuilds data/sector_trends.jsonl from seeds.jsonl
-scout/sector_assessment.py      monthly yfinance-based sector role/phase read -> data/sector_assessments.jsonl
-scout/run.py                    orchestrator -> digests/seeds-<date>.md + data/
-```
+Built and maintained by [Lucian Ellis](https://github.com/ljse1999) as the
+data backbone for the Capital Cascade research project.
